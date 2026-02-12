@@ -44,7 +44,14 @@ namespace GameAICourse
         {
             base.Start();
 
-            lastDistTraveled = pathTracker.totalDistanceTravelled;
+            if (pathTracker != null)
+            {
+                lastDistTraveled = pathTracker.totalDistanceTravelled;
+            }
+            else
+            {
+                UnityEngine.Debug.LogWarning("[NNVehicle] PathTracker is null in Start — cannot initialize distance tracking");
+            }
             lastDistSampleTime = Time.timeSinceLevelLoad;
 
         }
@@ -73,6 +80,8 @@ namespace GameAICourse
                 // Note that the reward is normalized so that it is generally 
                 // in the range of [0,1]
                 // This code can be revised!
+
+                if (pathTracker == null) { UnityEngine.Debug.LogWarning("[NNVehicle] PathTracker is null in Rewards — skipping distance reward"); return; }
 
                 var r = pathTracker.totalDistanceTravelled - lastDistTraveled;
 
@@ -103,7 +112,7 @@ namespace GameAICourse
 
             episodeStart = Time.timeSinceLevelLoad;
 
-            lastDistTraveled = pathTracker.totalDistanceTravelled;
+            lastDistTraveled = pathTracker != null ? pathTracker.totalDistanceTravelled : 0f;
             lastDistSampleTime = episodeStart;
 
             DB_RewardTotal = 0f;
@@ -132,7 +141,7 @@ namespace GameAICourse
         {
             base.ResetCar();
 
-            Debug.Log("RESET CAR");
+            Debug.Log($"[NNVehicle] RESET CAR — punishing agent");
             // just in case these are still set
             Throttle = 0f;
             Steering = 0f;

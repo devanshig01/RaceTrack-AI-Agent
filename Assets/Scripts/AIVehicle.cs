@@ -279,7 +279,7 @@ namespace GameAI
 
         public RectTransform VizInputMarker { get => vizInputMarker;
             set {
-                UnityEngine.Debug.Log("SETTING");
+                UnityEngine.Debug.Log("[AIVehicle] SETTING vizInputMarker");
                 vizInputMarker = value;
             } }
 
@@ -367,7 +367,11 @@ namespace GameAI
         {
             pathTracker = GetComponent<PathTracker>();
 
-            if (pathTracker == null) UnityEngine.Debug.LogError("No path tracker");
+            if (pathTracker == null)
+            {
+                UnityEngine.Debug.LogError("[AIVehicle] PathTracker component is missing — cannot initialize");
+                return;
+            }
 
             //stopwatch = new Stopwatch();
 
@@ -399,14 +403,26 @@ namespace GameAI
                 vizPar.GetLocalCorners(vizInputCorners);
             }
 
-            GameManager.Instance.StudentNameTMP.text += StudentName + System.Environment.NewLine;
+            var gmInit = GameManager.Instance;
+            if (gmInit != null && gmInit.StudentNameTMP != null)
+            {
+                gmInit.StudentNameTMP.text += StudentName + System.Environment.NewLine;
+            }
+            else
+            {
+                UnityEngine.Debug.LogWarning("[AIVehicle] GameManager.Instance or StudentNameTMP is null — skipping student name display");
+            }
 
 #if MULTIOSCONTROLS
             Debug.Log("[ACP] Using MultiOSControls");
 #endif
-            if (boostClip != null)
+            if (boostClip != null && boostSource != null)
             {
                 boostSource.clip = boostClip;
+            }
+            else if (boostClip != null)
+            {
+                UnityEngine.Debug.LogWarning("[AIVehicle] boostClip assigned but boostSource is null");
             }
 
             boost = maxBoost;
@@ -436,7 +452,10 @@ namespace GameAI
             //stopwatch.Start();
             startTime = Time.timeSinceLevelLoad;
 
-            startDist = pathTracker.totalDistanceTravelled;
+            if (pathTracker != null)
+            {
+                startDist = pathTracker.totalDistanceTravelled;
+            }
         }
 
 
@@ -470,6 +489,9 @@ namespace GameAI
         // Visual feedbacks and boost regen
         virtual protected void Update()
         {
+            if (_rb == null) { UnityEngine.Debug.LogWarning("[AIVehicle] Rigidbody not initialized yet"); return; }
+            if (pathTracker == null) { UnityEngine.Debug.LogWarning("[AIVehicle] PathTracker is null — skipping Update"); return; }
+
             DB_Throttle = Throttle;
             DB_Steering = Steering;
 
@@ -529,7 +551,7 @@ namespace GameAI
                 if (!_isResetting)
                 {
                     _isResetting = true;
-                    UnityEngine.Debug.Log("OOPS:Fall");
+                    UnityEngine.Debug.LogWarning($"[AIVehicle] OOPS:Fall — position={_rb.transform.position}, speed={Speed}");
                     ResetCar();
                 }
             }
@@ -553,7 +575,7 @@ namespace GameAI
                 if (Time.timeSinceLevelLoad - timeOfTilt > tiltTimeout)
                 {
                     tilted = false;
-                    UnityEngine.Debug.Log("OOPS:Tilted");
+                    UnityEngine.Debug.LogWarning($"[AIVehicle] OOPS:Tilted — tiltAngle={tiltAngle:F1}, position={_rb.transform.position}, speed={Speed}");
                     ResetCar();
                 }
             }
@@ -585,7 +607,7 @@ namespace GameAI
                 if (Time.timeSinceLevelLoad - timeOfStop > timeOfStopTimeout)
                 {
                     stopped = false;
-                    UnityEngine.Debug.Log("OOPS:Stopped");
+                    UnityEngine.Debug.LogWarning($"[AIVehicle] OOPS:Stopped — position={_rb.transform.position}, speed={Speed}");
                     ResetCar();
                 }
             }
@@ -594,7 +616,7 @@ namespace GameAI
                 stopped = false;
             }
 
-            //if(distFakeSlidingAvg < 0.5f)
+            //if(distFakeSlidingAvg< 0.5f)
             //{
             //    if(!stopped)
             //    {
@@ -630,7 +652,7 @@ namespace GameAI
                 if (Time.timeSinceLevelLoad - timeOfBkwds > timeOfBkwdsTimeout)
                 {
                     isTurnedBackwards = false;
-                    UnityEngine.Debug.Log("OOPS:Backwards");
+                    UnityEngine.Debug.LogWarning($"[AIVehicle] OOPS:Backwards — position={_rb.transform.position}, speed={Speed}");
                     ResetCar();
                 }
             }
@@ -644,6 +666,7 @@ namespace GameAI
 
 
             var gm = GameManager.Instance;
+            if (gm == null) { UnityEngine.Debug.LogWarning("[AIVehicle] GameManager.Instance is null — skipping HUD update"); return; }
 
             gm.Wipeouts = numResets;
             gm.KpHLTA = averageSpeed;
@@ -656,18 +679,18 @@ namespace GameAI
 
                 if (freezeHUDAtTime && (elpsSec > (float)freezeHUDSeconds))
                 {
-                    gm.ElapsedTMP.text = TimeSpan.FromSeconds((double)freezeHUDSeconds).ToString(@"hh\:mm\:ss\.fff");//stopwatch.Elapsed.ToString(@"hh\:mm\:ss");
+                    if (gm.ElapsedTMP != null) gm.ElapsedTMP.text = TimeSpan.FromSeconds((double)freezeHUDSeconds).ToString(@"hh\:mm\:ss\.fff");
                 }
                 else
                 {
-                    gm.ElapsedTMP.text = TimeSpan.FromSeconds((double)elpsSec).ToString(@"hh\:mm\:ss\.fff");//stopwatch.Elapsed.ToString(@"hh\:mm\:ss");
-                    gm.MetersPerSecTMP.text = Speed.ToString("0.0");
+                    if (gm.ElapsedTMP != null) gm.ElapsedTMP.text = TimeSpan.FromSeconds((double)elpsSec).ToString(@"hh\:mm\:ss\.fff");
+                    if (gm.MetersPerSecTMP != null) gm.MetersPerSecTMP.text = Speed.ToString("0.0");
 
                     //var elpsSec = stopwatch.Elapsed.TotalSeconds;
                     //var avgSpd = 3.6 * pathTracker.totalDistanceTravelled / elpsSec;
-                    gm.MetersPerSecLTATMP.text = averageSpeed.ToString("0.0");
-                    gm.TotalMetersTMP.text = pathTracker.totalDistanceTravelled.ToString("0.0");
-                    gm.WipeoutsTMP.text = numResets.ToString();
+                    if (gm.MetersPerSecLTATMP != null) gm.MetersPerSecLTATMP.text = averageSpeed.ToString("0.0");
+                    if (gm.TotalMetersTMP != null) gm.TotalMetersTMP.text = pathTracker.totalDistanceTravelled.ToString("0.0");
+                    if (gm.WipeoutsTMP != null) gm.WipeoutsTMP.text = numResets.ToString();
                 }
 
 
@@ -712,7 +735,7 @@ namespace GameAI
 
         protected virtual void ResetCar(bool trackResetCountAndPreserveDist)
         {
-            UnityEngine.Debug.Log("reset car");
+            UnityEngine.Debug.Log($"[AIVehicle] ResetCar — trackReset={trackResetCountAndPreserveDist}, numResets={numResets}");
             if (trackResetCountAndPreserveDist)
                 ++numResets;
 
@@ -722,19 +745,22 @@ namespace GameAI
 
             // distFakeSlidingAvg = 10f;
 
+            if (pathTracker == null) { UnityEngine.Debug.LogWarning("[AIVehicle] PathTracker is null in ResetCar — cannot reset position"); return; }
+            if (_rb == null) { UnityEngine.Debug.LogWarning("[AIVehicle] Rigidbody is null in ResetCar — cannot reset position"); return; }
+
             // make room for the car chassis to fit on road
             float minAllowedDist = 3f;
 
             if (!trackResetCountAndPreserveDist || pathTracker.distanceTravelled < minAllowedDist)
             {
-                UnityEngine.Debug.Log("reset to min");
+                UnityEngine.Debug.Log($"[AIVehicle] ResetCar — resetting to min distance ({minAllowedDist})");
                 pathTracker.ResetToDistance(minAllowedDist);
                 pathTracker.ResetTotalDistance();
             }
 
             if (pathTracker.distanceTravelled > (pathTracker.MaxPathDistance - minAllowedDist))
             {
-                UnityEngine.Debug.Log("reset to max");
+                UnityEngine.Debug.Log($"[AIVehicle] ResetCar — resetting to max distance ({pathTracker.MaxPathDistance - minAllowedDist})");
                 pathTracker.ResetToDistance(pathTracker.MaxPathDistance - minAllowedDist);
             }
 
@@ -755,6 +781,11 @@ namespace GameAI
         // Update everything
         virtual protected void FixedUpdate()
         {
+            if (_rb == null) { UnityEngine.Debug.LogWarning("[AIVehicle] Rigidbody not initialized yet — skipping FixedUpdate"); return; }
+            if (wheels == null || wheels.Length == 0) { UnityEngine.Debug.LogWarning("[AIVehicle] No wheels configured — skipping FixedUpdate"); return; }
+            if (driveWheel == null || driveWheel.Length == 0) { UnityEngine.Debug.LogWarning("[AIVehicle] No drive wheels configured — skipping FixedUpdate"); return; }
+            if (turnWheel == null || turnWheel.Length == 0) { UnityEngine.Debug.LogWarning("[AIVehicle] No turn wheels configured — skipping FixedUpdate"); return; }
+
             // Mesure current speed
             speed = transform.InverseTransformDirection(_rb.velocity).z * 3.6f;
 

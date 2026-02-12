@@ -36,25 +36,27 @@ namespace GameAI {
             _source = audioSources[audioSources.Length - 1];
             
 
-            if (_source == null) Debug.Log("no source");
+            if (_source == null) Debug.LogError("[AIEngineSoundManager] AudioSource is null — sound will not work");
 
             _vehicle = GetComponent<AIVehicle>();
 
-            if (_vehicle == null) Debug.Log("no vehicle");
+            if (_vehicle == null) Debug.LogError("[AIEngineSoundManager] AIVehicle component is null — sound will not work");
         }
 
 
         void Update () {
+            if (_vehicle == null || _source == null) { Debug.LogWarning("[AIEngineSoundManager] Missing required component, skipping audio update"); return; }
+
             if (_vehicle.Handbrake && _source.clip == rolling)
             {
-                Debug.Log($"Playing stopping. Handbrake {_vehicle.Handbrake} isPlaying: {_source.isPlaying}");
+                Debug.Log($"[AIEngineSoundManager] Playing stopping. Handbrake {_vehicle.Handbrake} isPlaying: {_source.isPlaying}");
                 _source.clip = stopping;
                 _source.Play();
             }
 
             if (!_vehicle.Handbrake && (_source.clip == stopping || _source.clip == null))
             {
-                Debug.Log($"Playing starting. Handbrake {_vehicle.Handbrake} isPlaying: {_source.isPlaying}");
+                Debug.Log($"[AIEngineSoundManager] Playing starting. Handbrake {_vehicle.Handbrake} isPlaying: {_source.isPlaying}");
                 _source.clip = starting;
                 _source.Play();
 

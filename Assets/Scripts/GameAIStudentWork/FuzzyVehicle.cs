@@ -233,6 +233,8 @@ namespace GameAICourse
 
             //HardCodeSteering(0f);
             //HardCodeThrottle(1f);
+            if (pathTracker == null) { UnityEngine.Debug.LogWarning("[FuzzyVehicle] PathTracker is null, skipping fuzzy logic"); return; }
+
             Vector3 difference = (transform.position - pathTracker.closestPointOnPath);
             float distance = Vector2.Distance(new Vector2(transform.position.x, transform.position.z), new Vector2(pathTracker.closestPointOnPath.x, pathTracker.closestPointOnPath.z));
             float signed_angle = Vector3.SignedAngle(difference, pathTracker.closestPointDirectionOnPath, Vector3.up);
